@@ -307,7 +307,7 @@
 
     // 配置本地模型加载
     env.allowLocalModels = true;
-    env.localModelPath = '/models/';
+    env.localModelPath = new URL('./models/', window.location.href).href;
 
     const CONTENT = {
         ancient: {
