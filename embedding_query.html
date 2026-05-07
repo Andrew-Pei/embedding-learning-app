@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 词向量工具</title>
+    <style>
+        :root {
+            --color-primary: #2563eb;
+            --color-primary-hover: #1d4ed8;
+            --color-success: #16a34a;
+            --color-teal: #0891b2;
+            --color-neutral-50: #f9fafb;
+            --color-neutral-100: #f3f4f6;
+            --color-neutral-200: #e5e7eb;
+            --color-neutral-300: #d1d5db;
+            --color-neutral-500: #6b7280;
+            --color-neutral-700: #374151;
+            --color-neutral-900: #111827;
+            --text-sm: 14px;
+            --text-base: 16px;
+            --text-lg: 20px;
+            --text-xl: 24px;
+            --space-2: 8px;
+            --space-3: 12px;
+            --space-4: 16px;
+            --space-5: 20px;
+            --space-6: 24px;
+            --space-8: 32px;
+            --radius: 8px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+            background: var(--color-neutral-100);
+            color: var(--color-neutral-900);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: var(--space-8) var(--space-4);
+        }
+        .container {
+            background: #fff;
+            padding: var(--space-6);
+            border-radius: var(--radius);
+            border: 1px solid var(--color-neutral-200);
+            width: 100%;
+            max-width: 800px;
+        }
+        h1 {
+            color: var(--color-neutral-900);
+            font-size: var(--text-xl);
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: var(--space-6);
+        }
+        /* 标签页 */
+        .tabs {
+            display: flex;
+            gap: var(--space-2);
+            margin-bottom: var(--space-6);
+            border-bottom: 2px solid var(--color-neutral-200);
+            padding-bottom: var(--space-3);
+        }
+        .tab-btn {
+            padding: var(--space-2) var(--space-5);
+            border: 1px solid var(--color-neutral-300);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: var(--text-sm);
+            background: var(--color-neutral-50);
+            color: var(--color-neutral-700);
+            transition: background 0.2s;
+        }
+        .tab-btn:hover { background: var(--color-neutral-200); }
+        .tab-btn.active {
+            background: var(--color-primary);
+            color: #fff;
+            border-color: var(--color-primary);
+        }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+        /* 输入 */
+        .input-group { margin-bottom: var(--space-5); }
+        label {
+            display: block;
+            margin-bottom: var(--space-2);
+            font-weight: 600;
+            font-size: var(--text-sm);
+            color: var(--color-neutral-700);
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: var(--space-2);
+            border: 1px solid var(--color-neutral-300);
+            border-radius: 6px;
+            font-size: var(--text-base);
+        }
+        input[type="text"]:focus { border-color: var(--color-primary); outline: none; }
+        .word-pair {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: var(--space-3);
+            align-items: end;
+        }
+        .word-pair .vs {
+            font-size: var(--text-lg);
+            font-weight: 700;
+            color: var(--color-neutral-500);
+            padding-bottom: var(--space-1);
+            text-align: center;
+        }
+        /* 按钮 */
+        .btn {
+            width: 100%;
+            padding: var(--space-2) var(--space-5);
+            border: none;
+            border-radius: 6px;
+            font-size: var(--text-base);
+            font-weight: 600;
+            cursor: pointer;
+            color: #fff;
+            transition: background 0.2s;
+        }
+        .btn-primary { background: var(--color-primary); }
+        .btn-primary:hover { background: var(--color-primary-hover); }
+        .btn-primary:disabled { background: var(--color-neutral-300); cursor: not-allowed; }
+        .loading {
+            text-align: center;
+            color: var(--color-primary);
+            font-weight: 600;
+            display: none;
+            margin-top: var(--space-3);
+        }
+        /* 结果区 */
+        .result-area {
+            margin-top: var(--space-6);
+            border-top: 2px dashed var(--color-neutral-200);
+            padding-top: var(--space-5);
+            display: none;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            background: var(--color-neutral-700);
+            color: #fff;
+            padding: var(--space-3);
+            border-radius: var(--radius);
+            margin-bottom: var(--space-3);
+            font-size: var(--text-sm);
+        }
+        .stats strong { margin-right: var(--space-1); }
+        .vector-box {
+            background: #1e1e2e;
+            color: #cdd6f4;
+            padding: var(--space-3);
+            border-radius: var(--radius);
+            font-family: "Courier New", Courier, monospace;
+            height: 200px;
+            overflow-y: auto;
+            word-wrap: break-word;
+            line-height: 1.5;
+            font-size: 13px;
+        }
+        /* 相似度结果 */
+        .similarity-result {
+            text-align: center;
+            padding: var(--space-6);
+            background: var(--color-neutral-50);
+            border-radius: var(--radius);
+            border: 1px solid var(--color-neutral-200);
+        }
+        .similarity-words {
+            font-size: var(--text-lg);
+            font-weight: 600;
+            margin-bottom: var(--space-3);
+        }
+        .word-a { color: var(--color-primary); }
+        .word-b { color: var(--color-teal); }
+        .similarity-value {
+            font-size: 48px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        .similarity-bar-wrap {
+            margin-top: var(--space-4);
+            background: var(--color-neutral-200);
+            border-radius: 999px;
+            height: 20px;
+            overflow: hidden;
+        }
+        .similarity-bar {
+            height: 100%;
+            border-radius: 999px;
+            transition: width 0.5s;
+        }
+        .bar-positive { background: var(--color-success); }
+        .bar-neutral { background: var(--color-neutral-500); }
+        .bar-negative { background: #dc2626; }
+        .similarity-label {
+            margin-top: var(--space-3);
+            font-size: var(--text-base);
+            font-weight: 600;
+        }
+        /* toast */
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: var(--space-2) var(--space-6);
+            border-radius: 6px;
+            font-size: var(--text-sm);
+            font-weight: 600;
+            color: #fff;
+            z-index: 999;
+            display: none;
+        }
+        .toast-success { background: var(--color-success); }
+        .toast-error { background: #dc2626; }
+        @media (max-width: 480px) {
+            body { padding: var(--space-4) var(--space-2); }
+            .container { padding: var(--space-4); }
+            .word-pair { grid-template-columns: 1fr; }
+            .similarity-value { font-size: 36px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<div class="container">
+    <h1>AI 词向量工具</h1>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('query')">查询词向量</button>
+        <button class="tab-btn" onclick="switchTab('similarity')">计算相似度</button>
+    </div>
+
+    <!-- 面板1：查询单个词向量 -->
+    <div class="tab-panel active" id="panel-query">
+        <div class="input-group">
+            <label for="textInput">输入你想让 AI 解析的词语或句子</label>
+            <input type="text" id="textInput" placeholder="例如：人工智能、苹果、快乐...">
+        </div>
+        <button class="btn btn-primary" id="queryBtn" onclick="getEmbedding()">提取词向量 (Embedding)</button>
+        <div class="loading" id="queryLoading">正在连接 AI 模型计算中...</div>
+        <div class="result-area" id="queryResult">
+            <div class="stats">
+                <div><strong>输入内容:</strong> <span id="showInput"></span></div>
+                <div><strong>向量维度:</strong> <span id="showDim"></span> 维</div>
+            </div>
+            <label>机器眼中的"含义"（浮点数数组）：</label>
+            <div class="vector-box" id="vectorOutput"></div>
+        </div>
+    </div>
+
+    <!-- 面板2：计算两个词的相似度 -->
+    <div class="tab-panel" id="panel-similarity">
+        <div class="word-pair">
+            <div class="input-group">
+                <label for="wordA">词语 A</label>
+                <input type="text" id="wordA" placeholder="例如：快乐">
+            </div>
+            <div class="vs">vs</div>
+            <div class="input-group">
+                <label for="wordB">词语 B</label>
+                <input type="text" id="wordB" placeholder="例如：高兴">
+            </div>
+        </div>
+        <button class="btn btn-primary" id="simBtn" onclick="getSimilarity()">计算语义相似度</button>
+        <div class="loading" id="simLoading">正在计算词向量与相似度...</div>
+        <div class="result-area" id="simResult">
+            <div class="similarity-result">
+                <div class="similarity-words">
+                    <span class="word-a" id="simWordA"></span>
+                    <span style="color:var(--color-neutral-500);margin:0 var(--space-2)">vs</span>
+                    <span class="word-b" id="simWordB"></span>
+                </div>
+                <div class="similarity-value" id="simValue"></div>
+                <div class="similarity-bar-wrap">
+                    <div class="similarity-bar" id="simBar" style="width:0%"></div>
+                </div>
+                <div class="similarity-label" id="simLabel"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 加密配置
+    const _K = 'xx_class_embed_2026';
+    const _E = 'CxNyCBUPHAM9EgQQEwE5X0RAUQgKPRoJGwIVMAIPAxYHMEJBWkITACwJCQcGGSsQAwkW';
+    const EMBEDDING_API_URL = 'https://api.siliconflow.cn/v1/embeddings';
+    const EMBEDDING_MODEL = 'BAAI/bge-large-zh-v1.5';
+
+    function _d(encoded, key) {
+        const raw = atob(encoded);
+        let result = '';
+        for (let i = 0; i < raw.length; i++) {
+            result += String.fromCharCode(raw.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+        }
+        return result;
+    }
+
+    function showToast(msg, type) {
+        var t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className = 'toast toast-' + (type || 'success');
+        t.style.display = 'block';
+        setTimeout(function() { t.style.display = 'none'; }, 2500);
+    }
+
+    function switchTab(name) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        document.getElementById('panel-' + name).classList.add('active');
+        event.currentTarget.classList.add('active');
+    }
+
+    // 调用 API 获取 embedding
+    async function fetchEmbedding(text) {
+        const apiKey = _d(_E, _K);
+        const response = await fetch(EMBEDDING_API_URL, {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + apiKey,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ model: EMBEDDING_MODEL, input: text })
+        });
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.message || 'API 请求失败');
+        }
+        const data = await response.json();
+        return data.data[0].embedding;
+    }
+
+    // 余弦相似度
+    function cosineSimilarity(a, b) {
+        let dot = 0, normA = 0, normB = 0;
+        for (let i = 0; i < a.length; i++) {
+            dot += a[i] * b[i];
+            normA += a[i] * a[i];
+            normB += b[i] * b[i];
+        }
+        return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+    }
+
+    // ====== 功能1：查询单个词向量 ======
+    async function getEmbedding() {
+        const textInput = document.getElementById('textInput').value.trim();
+        const btn = document.getElementById('queryBtn');
+        const loading = document.getElementById('queryLoading');
+        const resultArea = document.getElementById('queryResult');
+
+        if (!textInput) { showToast('请输入要解析的词语', 'error'); return; }
+
+        btn.disabled = true;
+        loading.style.display = 'block';
+        resultArea.style.display = 'none';
+
+        try {
+            const vector = await fetchEmbedding(textInput);
+            document.getElementById('showInput').innerText = textInput;
+            document.getElementById('showDim').innerText = vector.length;
+            document.getElementById('vectorOutput').innerText = '[\n  ' + vector.join(',\n  ') + '\n]';
+            resultArea.style.display = 'block';
+        } catch (error) {
+            showToast('出错了: ' + error.message, 'error');
+        } finally {
+            btn.disabled = false;
+            loading.style.display = 'none';
+        }
+    }
+
+    // ====== 功能2：计算两个词的相似度 ======
+    async function getSimilarity() {
+        const wordA = document.getElementById('wordA').value.trim();
+        const wordB = document.getElementById('wordB').value.trim();
+        const btn = document.getElementById('simBtn');
+        const loading = document.getElementById('simLoading');
+        const resultArea = document.getElementById('simResult');
+
+        if (!wordA || !wordB) { showToast('请输入两个词语', 'error'); return; }
+
+        btn.disabled = true;
+        loading.style.display = 'block';
+        resultArea.style.display = 'none';
+
+        try {
+            const [vecA, vecB] = await Promise.all([
+                fetchEmbedding(wordA),
+                fetchEmbedding(wordB)
+            ]);
+
+            const sim = cosineSimilarity(vecA, vecB);
+
+            document.getElementById('simWordA').textContent = wordA;
+            document.getElementById('simWordB').textContent = wordB;
+
+            const simPercent = ((sim + 1) / 2 * 100).toFixed(1);
+            const simDisplay = sim.toFixed(4);
+
+            document.getElementById('simValue').textContent = simDisplay;
+
+            const bar = document.getElementById('simBar');
+            bar.style.width = simPercent + '%';
+            bar.className = 'similarity-bar ' + (sim > 0.6 ? 'bar-positive' : sim > 0.2 ? 'bar-neutral' : 'bar-negative');
+
+            let label = '';
+            if (sim > 0.9) label = '语义极其相近，几乎同义';
+            else if (sim > 0.7) label = '语义相近，属于同类概念';
+            else if (sim > 0.4) label = '语义有一定关联';
+            else if (sim > 0.1) label = '语义关联较弱';
+            else label = '语义几乎无关';
+            document.getElementById('simLabel').textContent = label;
+
+            resultArea.style.display = 'block';
+        } catch (error) {
+            showToast('出错了: ' + error.message, 'error');
+        } finally {
+            btn.disabled = false;
+            loading.style.display = 'none';
+        }
+    }
+</script>
+
+</body>
+</html>
