@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>第三步：分词实验 - 人机大比拼</title>
+    <style>
+        :root {
+            --color-primary: #2563eb;
+            --color-primary-hover: #1d4ed8;
+            --color-success: #16a34a;
+            --color-teal: #0891b2;
+            --color-error: #dc2626;
+            --color-neutral-50: #f9fafb;
+            --color-neutral-100: #f3f4f6;
+            --color-neutral-200: #e5e7eb;
+            --color-neutral-300: #d1d5db;
+            --color-neutral-500: #6b7280;
+            --color-neutral-700: #374151;
+            --color-neutral-900: #111827;
+            --text-sm: 14px;
+            --text-base: 16px;
+            --text-lg: 20px;
+            --text-xl: 24px;
+            --space-2: 8px;
+            --space-3: 12px;
+            --space-4: 16px;
+            --space-5: 20px;
+            --space-6: 24px;
+            --space-8: 32px;
+            --radius: 8px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+            background: var(--color-neutral-100);
+            color: var(--color-neutral-900);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: var(--space-8) var(--space-4);
+        }
+
+        .app-container {
+            background: #fff;
+            padding: var(--space-8);
+            border-radius: var(--radius);
+            border: 1px solid var(--color-neutral-200);
+            width: 100%;
+            max-width: 850px;
+        }
+
+        h2 {
+            font-size: var(--text-xl);
+            font-weight: 600;
+            margin-bottom: var(--space-2);
+        }
+
+        .subtitle {
+            color: var(--color-neutral-500);
+            font-size: var(--text-sm);
+            margin-bottom: var(--space-6);
+            line-height: 1.5;
+        }
+
+        .subtitle b { color: var(--color-neutral-900); }
+
+        /* 标签页 */
+        .nav {
+            display: flex;
+            gap: var(--space-3);
+            margin-bottom: var(--space-6);
+            border-bottom: 2px solid var(--color-neutral-200);
+            padding-bottom: var(--space-5);
+        }
+
+        .tab-btn {
+            padding: var(--space-2) var(--space-5);
+            border: 1px solid var(--color-neutral-300);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: var(--text-sm);
+            background: var(--color-neutral-50);
+            color: var(--color-neutral-700);
+            transition: background 0.2s;
+        }
+
+        .tab-btn:hover { background: var(--color-neutral-200); }
+
+        .tab-btn.active {
+            background: var(--color-neutral-700);
+            color: #fff;
+            border-color: var(--color-neutral-700);
+        }
+
+        /* 文本区 */
+        .text-area {
+            line-height: 2.5;
+            font-size: var(--text-xl);
+            background: var(--color-neutral-50);
+            padding: var(--space-6);
+            border-radius: var(--radius);
+            border: 1px solid var(--color-neutral-200);
+            min-height: 100px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .mode-ancient { font-family: "KaiTi", "Kaiti SC", serif; }
+
+        .char { display: inline-block; }
+
+        .divider {
+            display: inline-block;
+            width: 20px;
+            text-align: center;
+            color: var(--color-neutral-300);
+            cursor: pointer;
+            font-family: sans-serif;
+            font-size: var(--text-sm);
+            transition: color 0.2s;
+            user-select: none;
+        }
+
+        .divider:hover {
+            color: var(--color-error);
+            background: rgba(220, 38, 38, 0.08);
+            border-radius: 4px;
+        }
+
+        .divider.cut {
+            color: var(--color-error);
+            font-weight: bold;
+            font-size: var(--text-lg);
+        }
+
+        /* 统计栏 */
+        .stat-bar {
+            margin-top: var(--space-5);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--color-neutral-50);
+            padding: var(--space-3) var(--space-4);
+            border-radius: 6px;
+            font-size: var(--text-sm);
+            flex-wrap: wrap;
+            gap: var(--space-2);
+        }
+
+        .count-num {
+            color: var(--color-error);
+            font-weight: 700;
+            font-size: var(--text-lg);
+        }
+
+        .btn {
+            padding: var(--space-2) var(--space-4);
+            cursor: pointer;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: var(--text-sm);
+            color: #fff;
+            transition: background 0.2s;
+        }
+
+        .btn-reset {
+            background: var(--color-neutral-300);
+            color: var(--color-neutral-700);
+            margin-right: var(--space-2);
+        }
+
+        .btn-reset:hover { background: var(--color-neutral-500); }
+
+        .btn-verify { background: var(--color-primary); }
+        .btn-verify:hover { background: var(--color-primary-hover); }
+        .btn-verify:disabled { background: var(--color-neutral-300); cursor: not-allowed; }
+
+        .lesson-tip {
+            margin-top: var(--space-5);
+            font-size: var(--text-sm);
+            color: var(--color-neutral-500);
+            line-height: 1.6;
+        }
+
+        /* 对比区域 */
+        #comparison-area {
+            display: none;
+            margin-top: var(--space-6);
+            border-top: 2px dashed var(--color-neutral-200);
+            padding-top: var(--space-5);
+        }
+
+        .compare-title {
+            text-align: center;
+            font-size: var(--text-lg);
+            font-weight: 600;
+            color: var(--color-neutral-900);
+            margin-bottom: var(--space-4);
+        }
+
+        .compare-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-5);
+        }
+
+        .compare-col {
+            border: 1px solid var(--color-neutral-200);
+            border-radius: var(--radius);
+            padding: var(--space-5);
+            background: var(--color-neutral-50);
+        }
+
+        .col-title {
+            font-weight: 600;
+            margin-bottom: var(--space-4);
+            font-size: var(--text-base);
+        }
+
+        .col-title-user { color: var(--color-primary); }
+        .col-title-llm { color: var(--color-teal); }
+
+        .token-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-2);
+        }
+
+        .token {
+            padding: var(--space-2) var(--space-3);
+            border-radius: 6px;
+            font-size: var(--text-base);
+            color: #fff;
+        }
+
+        .token-user { background: var(--color-primary); }
+        .token-llm { background: var(--color-teal); }
+
+        .token-id {
+            display: block;
+            font-size: 11px;
+            opacity: 0.8;
+            margin-top: 2px;
+            text-align: center;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .app-container { padding: var(--space-5); }
+            .compare-grid { grid-template-columns: 1fr; }
+            .text-area { font-size: var(--text-lg); }
+        }
+
+        @media (max-width: 480px) {
+            body { padding: var(--space-4) var(--space-2); }
+            .app-container { padding: var(--space-4); }
+            .text-area { font-size: var(--text-base); padding: var(--space-4); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <h2>语义切分：人机大比拼</h2>
+        <p class="subtitle">点击文字间的<b>点</b>变为<b>斜线</b>，完成你认为合理的断句。完成后点击"提交校验"，看看 AI 模型是怎么切分的。</p>
+
+        <div class="nav">
+            <button class="tab-btn active" id="btn-ancient" onclick="loadText('ancient')">文言文：醉翁亭记</button>
+            <button class="tab-btn" id="btn-modern" onclick="loadText('modern')">现代文：荷塘月色</button>
+        </div>
+
+        <div class="text-area" id="text-box"></div>
+
+        <div class="stat-bar">
+            <div>你目前切分出了 <span class="count-num" id="token-count">1</span> 个词（Token）</div>
+            <div>
+                <button class="btn btn-reset" onclick="resetCuts()">重置</button>
+                <button class="btn btn-verify" id="verify-btn" onclick="verifyTokens()" disabled>环境加载中...</button>
+            </div>
+        </div>
+
+        <div class="lesson-tip" id="lesson-tip"></div>
+
+        <div id="comparison-area">
+            <div class="compare-title">切分结果大比拼</div>
+            <div class="compare-grid">
+                <div class="compare-col">
+                    <div class="col-title col-title-user">你的切分结果</div>
+                    <div class="token-list" id="user-tokens-list"></div>
+                </div>
+                <div class="compare-col">
+                    <div class="col-title col-title-llm">大模型 Tokenizer</div>
+                    <div class="token-list" id="llm-tokens-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script type="module">
+    import { AutoTokenizer, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.16.0';
+
+    // 配置本地模型加载
+    env.allowLocalModels = true;
+    env.localModelPath = '/models/';
+
+    const CONTENT = {
+        ancient: {
+            text: "环滁皆山也其西南诸峰林壑尤美望之蔚然而深秀者琅琊也",
+            tip: "思考：文言文往往一字一义。如果切得太细，机器能搜到'山'的坐标；如果切成'滁皆'，机器在字典里可能就查不到这个词了。"
+        },
+        modern: {
+            text: "曲曲折折的荷塘上面弥望的是田田的叶子叶子出水很高像亭亭的舞女的裙",
+            tip: "思考：现代文有很多叠词（如'曲曲折折'）。你是把它们当成一个整体切开，还是拆散？AI 模型会怎么处理这些叠词？"
+        }
+    };
+
+    let currentMode = 'ancient';
+    let tokenizer = null;
+    let userTokens = [];
+
+    // 全局绑定（type="module" 作用域隔离）
+    window.loadText = loadText;
+    window.resetCuts = resetCuts;
+    window.verifyTokens = verifyTokens;
+
+    async function initTokenizer() {
+        try {
+            tokenizer = await AutoTokenizer.from_pretrained('Xenova/qwen1.5-0.5b', { local_files_only: true });
+            const verifyBtn = document.getElementById('verify-btn');
+            verifyBtn.textContent = '提交校验与 AI 对比';
+            verifyBtn.disabled = false;
+        } catch (error) {
+            console.error('Tokenizer 加载失败', error);
+            document.getElementById('verify-btn').textContent = '加载失败请刷新';
+        }
+    }
+
+    function loadText(mode) {
+        currentMode = mode;
+        const container = document.getElementById('text-box');
+        const tip = document.getElementById('lesson-tip');
+        const data = CONTENT[mode];
+
+        container.className = 'text-area' + (mode === 'ancient' ? ' mode-ancient' : '');
+        document.getElementById('btn-ancient').classList.toggle('active', mode === 'ancient');
+        document.getElementById('btn-modern').classList.toggle('active', mode === 'modern');
+
+        container.innerHTML = '';
+        tip.textContent = data.tip;
+        document.getElementById('comparison-area').style.display = 'none';
+
+        const words = data.text.split('');
+        words.forEach((char, i) => {
+            const charSpan = document.createElement('span');
+            charSpan.className = 'char';
+            charSpan.textContent = char;
+            container.appendChild(charSpan);
+
+            if (i < words.length - 1) {
+                const divSpan = document.createElement('span');
+                divSpan.className = 'divider';
+                divSpan.textContent = '\u00B7';
+                divSpan.onclick = function() {
+                    this.classList.toggle('cut');
+                    this.textContent = this.classList.contains('cut') ? '/' : '\u00B7';
+                    updateCount();
+                    document.getElementById('comparison-area').style.display = 'none';
+                };
+                container.appendChild(divSpan);
+            }
+        });
+        updateCount();
+    }
+
+    function updateCount() {
+        const cuts = document.querySelectorAll('.divider.cut').length;
+        document.getElementById('token-count').textContent = cuts + 1;
+    }
+
+    function resetCuts() {
+        document.querySelectorAll('.divider').forEach(d => {
+            d.textContent = '\u00B7';
+            d.classList.remove('cut');
+        });
+        updateCount();
+        document.getElementById('comparison-area').style.display = 'none';
+    }
+
+    async function verifyTokens() {
+        if (!tokenizer) return;
+
+        const userBox = document.getElementById('user-tokens-list');
+        const llmBox = document.getElementById('llm-tokens-list');
+        userBox.innerHTML = '';
+        llmBox.innerHTML = '';
+
+        // 提取学生切分
+        userTokens = [];
+        let currentToken = '';
+        const children = document.getElementById('text-box').children;
+
+        for (let i = 0; i < children.length; i++) {
+            const child = children[i];
+            if (child.classList.contains('char')) {
+                currentToken += child.textContent;
+            } else if (child.classList.contains('divider') && child.classList.contains('cut')) {
+                userTokens.push(currentToken);
+                currentToken = '';
+            }
+        }
+        if (currentToken) userTokens.push(currentToken);
+
+        userTokens.forEach(t => {
+            const span = document.createElement('span');
+            span.className = 'token token-user';
+            span.textContent = t;
+            userBox.appendChild(span);
+        });
+
+        // 大模型切分
+        const rawText = CONTENT[currentMode].text;
+        const tokenIds = tokenizer.encode(rawText);
+
+        tokenIds.forEach(id => {
+            const tokenText = tokenizer.decode([id]).replace(/ /g, '').trim();
+            if (tokenText === '') return;
+            const span = document.createElement('span');
+            span.className = 'token token-llm';
+            span.innerHTML = tokenText + ' <span class="token-id">ID: ' + id + '</span>';
+            llmBox.appendChild(span);
+        });
+
+        document.getElementById('comparison-area').style.display = 'block';
+        setTimeout(function() {
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }, 100);
+    }
+
+    initTokenizer();
+    loadText('ancient');
+</script>
+
+</body>
+</html>
