@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>第二步：动态词向量实验室</title>
+    <style>
+        :root {
+            --color-primary: #2563eb;
+            --color-primary-hover: #1d4ed8;
+            --color-success: #16a34a;
+            --color-warning: #d97706;
+            --color-error: #dc2626;
+            --color-neutral-50: #f9fafb;
+            --color-neutral-100: #f3f4f6;
+            --color-neutral-200: #e5e7eb;
+            --color-neutral-300: #d1d5db;
+            --color-neutral-500: #6b7280;
+            --color-neutral-700: #374151;
+            --color-neutral-900: #111827;
+            --text-sm: 14px;
+            --text-base: 16px;
+            --text-lg: 20px;
+            --text-xl: 24px;
+            --space-2: 8px;
+            --space-3: 12px;
+            --space-4: 16px;
+            --space-5: 20px;
+            --space-6: 24px;
+            --space-8: 32px;
+            --radius: 8px;
+            --shadow-1: 0 1px 3px rgba(0,0,0,0.08);
+            --shadow-2: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+            background: var(--color-neutral-100);
+            color: var(--color-neutral-900);
+            padding: var(--space-4);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* 头部 */
+        .header {
+            width: 100%;
+            max-width: 950px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--space-4);
+            flex-wrap: wrap;
+            gap: var(--space-2);
+        }
+
+        h2 {
+            font-size: var(--text-xl);
+            font-weight: 600;
+        }
+
+        .nav-tabs { display: flex; gap: var(--space-2); }
+
+        .tab-btn {
+            padding: var(--space-2) var(--space-4);
+            border: 1px solid var(--color-neutral-300);
+            border-radius: 6px;
+            cursor: pointer;
+            background: var(--color-neutral-50);
+            color: var(--color-neutral-700);
+            font-weight: 600;
+            font-size: var(--text-sm);
+            transition: background 0.2s;
+        }
+
+        .tab-btn:hover { background: var(--color-neutral-200); }
+
+        .tab-btn.active {
+            background: var(--color-primary);
+            color: #fff;
+            border-color: var(--color-primary);
+        }
+
+        /* 画布区域 */
+        .canvas-area {
+            position: relative;
+            width: 100%;
+            max-width: 950px;
+            aspect-ratio: 95 / 60;
+            background: #fff;
+            border-radius: var(--radius);
+            border: 1px solid var(--color-neutral-200);
+            overflow: hidden;
+        }
+
+        /* 坐标轴 */
+        .axis-h {
+            position: absolute;
+            top: 50%;
+            left: 40px;
+            right: 40px;
+            height: 1px;
+            background: var(--color-neutral-300);
+        }
+
+        .axis-v {
+            position: absolute;
+            left: 50%;
+            top: 40px;
+            bottom: 40px;
+            width: 1px;
+            background: var(--color-neutral-300);
+        }
+
+        .axis-label {
+            position: absolute;
+            font-size: 13px;
+            color: var(--color-neutral-500);
+            font-weight: 600;
+            background: #fff;
+            padding: 2px var(--space-2);
+            z-index: 2;
+            border: 1px solid var(--color-neutral-200);
+            border-radius: 4px;
+        }
+
+        /* 词节点 */
+        .word-node {
+            position: absolute;
+            padding: 6px 14px;
+            border-radius: 20px;
+            color: #fff;
+            font-size: var(--text-sm);
+            font-weight: 600;
+            cursor: grab;
+            user-select: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: var(--shadow-1);
+            z-index: 10;
+            transition: transform 0.1s;
+        }
+
+        .word-node:active {
+            cursor: grabbing;
+            transform: scale(1.1);
+            z-index: 100;
+        }
+
+        .word-node.selected {
+            outline: 2px solid var(--color-neutral-900);
+        }
+
+        .coord-tag {
+            font-family: "Courier New", Courier, monospace;
+            font-size: 10px;
+            opacity: 0.85;
+            margin-top: 2px;
+            background: rgba(0,0,0,0.2);
+            padding: 1px 4px;
+            border-radius: 4px;
+        }
+
+        /* 连线 */
+        .distance-line {
+            position: absolute;
+            height: 0;
+            border-top: 1.5px dashed var(--color-primary);
+            transform-origin: 0 0;
+            pointer-events: none;
+            z-index: 5;
+            opacity: 0.4;
+        }
+
+        /* 距离面板 */
+        .distance-panel {
+            width: 100%;
+            max-width: 950px;
+            margin-top: var(--space-4);
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: var(--space-2);
+            background: #fff;
+            padding: var(--space-4);
+            border-radius: var(--radius);
+            border: 1px solid var(--color-neutral-200);
+        }
+
+        .dist-card {
+            font-size: 13px;
+            color: var(--color-neutral-900);
+            padding: var(--space-2);
+            border-bottom: 1px solid var(--color-neutral-100);
+        }
+
+        .dist-card b {
+            color: var(--color-primary);
+            float: right;
+        }
+
+        .panel-hint {
+            color: var(--color-neutral-500);
+            text-align: center;
+            grid-column: 1 / -1;
+            font-size: var(--text-sm);
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .header { flex-direction: column; align-items: flex-start; }
+            .canvas-area { aspect-ratio: 4 / 3; }
+        }
+
+        @media (max-width: 480px) {
+            body { padding: var(--space-2); }
+            .canvas-area { aspect-ratio: 3 / 4; }
+            .distance-panel { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2>动态词向量实验室</h2>
+        <div class="nav-tabs">
+            <button class="tab-btn active" onclick="loadGroup('scenery')">山水人文空间</button>
+            <button class="tab-btn" onclick="loadGroup('emotion')">情绪语义空间</button>
+        </div>
+    </div>
+
+    <div class="canvas-area" id="stage">
+        <div class="axis-h"></div>
+        <div class="axis-v"></div>
+        <div id="labels-container"></div>
+        <div id="lines-container"></div>
+    </div>
+
+    <div class="distance-panel" id="dist-panel">
+        <div class="panel-hint">点击上方任意词语以计算语义距离</div>
+    </div>
+
+<script>
+    const stage = document.getElementById('stage');
+    const panel = document.getElementById('dist-panel');
+    const linesContainer = document.getElementById('lines-container');
+    const labelsContainer = document.getElementById('labels-container');
+
+    const GROUP_COLORS = {
+        scenery: '#16a34a',
+        emotion: '#d97706'
+    };
+
+    const DATA_GROUPS = {
+        scenery: {
+            labels: ["\u2191 与人文相关", "\u2193 与自然相关", "\u2190 与水相关", "与山相关 \u2192"],
+            words: ["山峦","氤氲","阡陌","缥缈","峥嵘","潋滟","蒹葭","瀑布","少林","泰山"]
+        },
+        emotion: {
+            labels: ["\u2191 更快乐的情绪", "\u2193 更伤心的情绪", "\u2190 更平静的情绪", "更强烈的情绪 \u2192"],
+            words: ["喜悦","激动","狂喜","欣慰","平静","沮丧","失落","痛苦","焦虑","紧张","惊恐","愤怒","狂怒","无奈","孤独"]
+        }
+    };
+
+    let currentGroup = 'scenery';
+    let selectedNode = null;
+    let nodes = [];
+
+    function getStageMetrics() {
+        const rect = stage.getBoundingClientRect();
+        const pad = Math.min(40, rect.width * 0.05);
+        return { w: rect.width - pad * 2, h: rect.height - pad * 2, pad };
+    }
+
+    function loadGroup(groupId) {
+        currentGroup = groupId;
+        selectedNode = null;
+        nodes = [];
+        stage.querySelectorAll('.word-node').forEach(n => n.remove());
+        linesContainer.innerHTML = '';
+        labelsContainer.innerHTML = '';
+        panel.innerHTML = '<div class="panel-hint">点击上方任意词语以计算语义距离</div>';
+
+        document.querySelectorAll('.tab-btn').forEach(b => {
+            const isScenery = b.textContent.includes('山水');
+            b.classList.toggle('active', (groupId === 'scenery' && isScenery) || (groupId === 'emotion' && !isScenery));
+        });
+
+        const labels = DATA_GROUPS[groupId].labels;
+        const positions = [
+            { top: '5px', left: '50%', transform: 'translateX(-50%)' },
+            { bottom: '5px', left: '50%', transform: 'translateX(-50%)' },
+            { left: '5px', top: '50%', transform: 'translateY(-50%)' },
+            { right: '5px', top: '50%', transform: 'translateY(-50%)' }
+        ];
+        labels.forEach((text, i) => {
+            const el = document.createElement('div');
+            el.className = 'axis-label';
+            el.textContent = text;
+            Object.assign(el.style, positions[i]);
+            labelsContainer.appendChild(el);
+        });
+
+        DATA_GROUPS[groupId].words.forEach(name => {
+            const x = 0.2 + Math.random() * 0.6;
+            const y = 0.2 + Math.random() * 0.6;
+            createNode(name, x, y, GROUP_COLORS[groupId]);
+        });
+    }
+
+    function createNode(name, x, y, color) {
+        const node = document.createElement('div');
+        node.className = 'word-node';
+        node.style.backgroundColor = color;
+        node.innerHTML = '<div>' + name + '</div><div class="coord-tag">[' + x.toFixed(2) + ', ' + y.toFixed(2) + ']</div>';
+        node.dataset.x = x;
+        node.dataset.y = y;
+        node.dataset.name = name;
+
+        updateNodePos(node, x, y);
+
+        node.addEventListener('mousedown', startDrag);
+        node.addEventListener('click', function(e) {
+            selectNode(node);
+            e.stopPropagation();
+        });
+        // 触屏支持
+        node.addEventListener('touchstart', startTouchDrag, { passive: false });
+
+        stage.appendChild(node);
+        nodes.push(node);
+    }
+
+    function updateNodePos(node, x, y) {
+        const m = getStageMetrics();
+        node.style.left = (x * m.w + m.pad) + 'px';
+        node.style.top = ((1 - y) * m.h + m.pad) + 'px';
+        node.querySelector('.coord-tag').textContent = '[' + x.toFixed(2) + ', ' + y.toFixed(2) + ']';
+    }
+
+    function startDrag(e) {
+        const node = e.currentTarget;
+        const shiftX = e.clientX - node.getBoundingClientRect().left;
+        const shiftY = e.clientY - node.getBoundingClientRect().top;
+
+        function moveAt(pageX, pageY) {
+            const m = getStageMetrics();
+            const stageRect = stage.getBoundingClientRect();
+            let newX = (pageX - shiftX - stageRect.left - m.pad) / m.w;
+            let newY = 1 - (pageY - shiftY - stageRect.top - m.pad) / m.h;
+            newX = Math.max(0, Math.min(1, newX));
+            newY = Math.max(0, Math.min(1, newY));
+            node.dataset.x = newX;
+            node.dataset.y = newY;
+            updateNodePos(node, newX, newY);
+            if (selectedNode) updateUI();
+        }
+
+        function onMouseMove(event) { moveAt(event.pageX, event.pageY); }
+        document.addEventListener('mousemove', onMouseMove);
+        document.onmouseup = function() {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.onmouseup = null;
+        };
+    }
+
+    function startTouchDrag(e) {
+        e.preventDefault();
+        const node = e.currentTarget;
+        const touch = e.touches[0];
+        const shiftX = touch.clientX - node.getBoundingClientRect().left;
+        const shiftY = touch.clientY - node.getBoundingClientRect().top;
+
+        function moveAt(touchX, touchY) {
+            const m = getStageMetrics();
+            const stageRect = stage.getBoundingClientRect();
+            let newX = (touchX - shiftX - stageRect.left - m.pad) / m.w;
+            let newY = 1 - (touchY - shiftY - stageRect.top - m.pad) / m.h;
+            newX = Math.max(0, Math.min(1, newX));
+            newY = Math.max(0, Math.min(1, newY));
+            node.dataset.x = newX;
+            node.dataset.y = newY;
+            updateNodePos(node, newX, newY);
+            if (selectedNode) updateUI();
+        }
+
+        function onTouchMove(event) {
+            const t = event.touches[0];
+            moveAt(t.clientX, t.clientY);
+        }
+
+        function onTouchEnd() {
+            document.removeEventListener('touchmove', onTouchMove);
+            document.removeEventListener('touchend', onTouchEnd);
+        }
+
+        document.addEventListener('touchmove', onTouchMove, { passive: false });
+        document.addEventListener('touchend', onTouchEnd);
+    }
+
+    function selectNode(node) {
+        nodes.forEach(n => n.classList.remove('selected'));
+        selectedNode = node;
+        if (node) node.classList.add('selected');
+        updateUI();
+    }
+
+    function updateUI() {
+        linesContainer.innerHTML = '';
+        panel.innerHTML = '';
+        if (!selectedNode) return;
+
+        const x1 = parseFloat(selectedNode.dataset.x);
+        const y1 = parseFloat(selectedNode.dataset.y);
+        const name1 = selectedNode.dataset.name;
+
+        nodes.forEach(target => {
+            if (target === selectedNode) return;
+            const x2 = parseFloat(target.dataset.x);
+            const y2 = parseFloat(target.dataset.y);
+            const name2 = target.dataset.name;
+            const dist = Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2));
+            drawLink(selectedNode, target);
+
+            const card = document.createElement('div');
+            card.className = 'dist-card';
+            card.innerHTML = name1 + ' \u2194 ' + name2 + ' <b>' + dist.toFixed(3) + '</b>';
+            panel.appendChild(card);
+        });
+    }
+
+    function drawLink(n1, n2) {
+        const r1 = n1.getBoundingClientRect();
+        const r2 = n2.getBoundingClientRect();
+        const s = stage.getBoundingClientRect();
+        const x1 = r1.left + r1.width / 2 - s.left;
+        const y1 = r1.top + r1.height / 2 - s.top;
+        const x2 = r2.left + r2.width / 2 - s.left;
+        const y2 = r2.top + r2.height / 2 - s.top;
+        const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+        const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+
+        const line = document.createElement('div');
+        line.className = 'distance-line';
+        line.style.width = length + 'px';
+        line.style.left = x1 + 'px';
+        line.style.top = y1 + 'px';
+        line.style.transform = 'rotate(' + angle + 'deg)';
+        linesContainer.appendChild(line);
+    }
+
+    loadGroup('scenery');
+</script>
+</body>
+</html>
